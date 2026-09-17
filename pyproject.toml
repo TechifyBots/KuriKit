@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kurikit"
+version = "1.0.0"
+description = "Lightweight monkey patch adding client.listen() support to Kurigram"
+requires-python = ">=3.8"
+dependencies = [
+    "kurigram"
+]
+
+[tool.setuptools]
+py-modules = ["kurikit"]
