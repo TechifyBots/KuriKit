@@ -17,16 +17,13 @@ if not getattr(Message, "_listen_patched", False):
             key = (chat_id, user_id)
             key_chat = (chat_id, None)
 
-            if key in client.listen_futures:
-                future = client.listen_futures.pop(key)
-                if not future.done():
-                    future.set_result(msg)
-                raise StopPropagation
+            future = client.listen_futures.pop(key, None)
 
-            if key_chat in client.listen_futures:
-                future = client.listen_futures.pop(key_chat)
-                if not future.done():
-                    future.set_result(msg)
+            if future is None:
+                future = client.listen_futures.pop(key_chat, None)
+
+            if future is not None and not future.done():
+                future.set_result(msg)
                 raise StopPropagation
 
         return msg
@@ -39,23 +36,18 @@ async def custom_listen(self, chat_id, filters=None, timeout=60, user_id=None):
         self.listen_futures = {}
 
     future = asyncio.get_running_loop().create_future()
-
-    if user_id:
-        key = (chat_id, user_id)
-    else:
-        key = (chat_id, None)
+    key = (chat_id, user_id) if user_id else (chat_id, None)
 
     self.listen_futures[key] = future
 
     try:
-        if timeout:
-            message = await asyncio.wait_for(future, timeout=timeout)
-        else:
+        if timeout is None:
             message = await future
+        else:
+            message = await asyncio.wait_for(future, timeout)
 
-        if filters:
-            if not await filters(self, message):
-                return await self.listen(chat_id, filters, timeout, user_id)
+        if filters and not await filters(self, message):
+            return await self.listen(chat_id, filters, timeout, user_id)
 
         return message
 
